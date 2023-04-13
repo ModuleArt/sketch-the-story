@@ -1,13 +1,12 @@
 <template>
-  <div class="nav-bar">
+  <div class="menu-bar">
     <v-toolbar density="compact">
       <v-btn color="primary">
         Story
-
         <v-menu activator="parent">
           <v-list>
             <v-list-item
-              v-for="(item, index) in fileItems"
+              v-for="(item, index) in storyMenuItems"
               :key="index"
               :value="index"
             >
@@ -16,13 +15,13 @@
           </v-list>
         </v-menu>
       </v-btn>
+
       <v-btn color="primary">
         Act
-
         <v-menu activator="parent">
           <v-list>
             <v-list-item
-              v-for="(item, index) in actItems"
+              v-for="(item, index) in actMenuItems"
               :key="index"
               :value="index"
               :disabled="item.disabled"
@@ -35,30 +34,25 @@
       </v-btn>
 
       <template v-slot:extension>
-        <v-tabs v-model="currentAct" show-arrows>
-          <v-tab v-for="item in acts" :key="item.id" :value="item">
-            {{ item.title }}
+        <v-tabs
+          :modelValue="actStore.currentActId"
+          show-arrows
+          @update:modelValue="(tabId: unknown) => actStore.setCurrentActId(tabId as string)"
+        >
+          <v-tab v-for="tab in actStore.acts" :key="tab.id" :value="tab.id">
+            {{ tab.title || "New act" }}
           </v-tab>
         </v-tabs>
         <v-btn icon="mdi-plus" @click="newAct" />
       </template>
     </v-toolbar>
 
-    <v-window v-model="currentAct">
-      <v-window-item v-for="item in acts" :key="item.id" :value="item">
-        <v-card flat>
-          <v-card-text>{{ text }}</v-card-text>
-        </v-card>
-      </v-window-item>
-    </v-window>
-
     <v-dialog v-model="showActEditDialog" width="320">
       <v-card>
-        <v-card-title>Act</v-card-title>
         <v-card-text>
           <v-text-field
             label="Title"
-            v-model="currentAct.title"
+            v-model="actStore.currentAct.title"
             variant="underlined"
             autofocus
           />
@@ -76,12 +70,10 @@
 
 <script lang="ts" setup>
 import { ref, computed } from "vue";
-
-const text =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+import { useActStore } from "@/store/act";
 
 // stories
-const fileItems = [
+const storyMenuItems = [
   { title: "New..." },
   { title: "Open..." },
   { title: "Save" },
@@ -89,23 +81,12 @@ const fileItems = [
 ];
 
 // acts
-interface ActI {
-  id: string;
-  title: string;
-}
-
-const acts = ref<ActI[]>([{ id: "act-1", title: "Act 1" }]);
-
-const currentAct = ref<ActI>(acts.value[0]);
+const actStore = useActStore();
 
 const showActEditDialog = ref(false);
 
 const newAct = () => {
-  acts.value.push({
-    id: crypto.randomUUID(),
-    title: "",
-  });
-  currentAct.value = acts.value[acts.value.length - 1];
+  actStore.createEmptyAct();
   showActEditDialog.value = true;
 };
 
@@ -113,21 +94,23 @@ const editAct = () => {
   showActEditDialog.value = true;
 };
 
-const deleteAct = () => {
-  acts.value = acts.value.filter((act) => act.id !== currentAct.value.id);
-  currentAct.value = acts.value[acts.value.length - 1];
+const removeAct = () => {
+  actStore.removeActById(actStore.currentActId);
 };
 
-const actItems = computed(() => [
-  { title: "New", onClick: newAct },
+const actMenuItems = computed(() => [
+  {
+    title: "New",
+    onClick: newAct,
+  },
   {
     title: "Edit...",
     onClick: editAct,
   },
   {
-    title: "Delete",
-    onClick: deleteAct,
-    disabled: acts.value.length === 0,
+    title: "Remove",
+    onClick: removeAct,
+    disabled: actStore.acts.length === 0,
   },
 ]);
 </script>
